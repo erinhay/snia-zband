@@ -1,4 +1,4 @@
-# Supplimentary Resources for Foundation+YSE z-band Cosmological Analysis
+# Supplimentary Resources for the Foundation+YSE Analysis of the Cosmological Utility of SNe Ia in the z-band
 
 If you make use of this repository or the analysis in Hayes+24, please cite: Hayes E.E., et al., 2024 ...
 
