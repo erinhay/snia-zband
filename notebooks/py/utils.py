@@ -92,7 +92,7 @@ def heliocorr(zhel, RA, Dec):
 
 
 
-def get_peculiar_velocity_unc(z_HD, sigma_pec=150):
+def get_peculiar_velocity_unc(z_HD, sigma_z, sigma_pec=150):
     """
     Calculates the uncertainty in peculiar velocity based on redshift and uncertainty in distance.
 
@@ -108,7 +108,7 @@ def get_peculiar_velocity_unc(z_HD, sigma_pec=150):
     speed_of_light = ac.c.value / 1000  # km/s
     
     # Formula to calculate uncertainty in peculiar velocity
-    peculiar_velocity_unc = 5 * sigma_pec / (np.log(10) * z_HD * speed_of_light)
+    peculiar_velocity_unc = np.sqrt(((sigma_pec/speed_of_light)**2 + sigma_z**2) * (5 / (np.log(10) * z_HD))**2)
     
     return peculiar_velocity_unc  # Return the calculated uncertainty
 
@@ -325,7 +325,7 @@ def plot_histogram(data, key, bins=None):
 
 
 
-def apply_data_cuts(data, redshift_lower_limit=0.015, redshift_upper_limit_YSE=0.1, redshift_upper_limit_Foundation=0.08, keep_91Ts=False, g_obs=1, r_obs=1, i_obs=1, z_obs=4, gri_prepeak=True, z_prepeak=False, chi_squared_threshold=5, t0_unc_threshold=1, Av_upper_limit=1, theta_lower_limit=-1.5, theta_upper_limit=3, host_galaxy_mass=True, save_path='', print_summary=True):
+def apply_data_cuts(data, redshift_lower_limit=0.015, redshift_upper_limit_YSE=0.1, redshift_upper_limit_Foundation=0.08, keep_91Ts=False, g_obs=1, r_obs=1, i_obs=1, z_obs=3, gri_prepeak=True, z_prepeak=False, chi_squared_threshold=3, t0_unc_threshold=1, t0_agreement_threshold=0.5, Av_upper_limit=1, theta_lower_limit=-1.5, theta_upper_limit=3, host_galaxy_mass=True, save_path='', print_summary=True):
     """
     Applies data cuts to the input dataset based on various criteria.
 
@@ -343,6 +343,7 @@ def apply_data_cuts(data, redshift_lower_limit=0.015, redshift_upper_limit_YSE=0
     - z_prepeak (bool, optional): Whether to require z-band pre-peak data. Default is False.
     - chi_squared_threshold (float, optional): Maximum reduced chi-squared for the fit to the full griz light curve. Default is 5.
     - t0_unc_threshold (float, optional): Maximum uncertainty on the time of B-band maximum flux for the fit to the griz light curve and the gri light curve. Default is 1.
+    - t0_agreement_threshold (float, optional): Maximum allowed disagreement in the value of the time of B-band maximum flux as estimated from the griz light curve fit and that from the gri light curve fit.
     - Av_upper_limit (float, optional): Maximum Av (extinction) value. Default is 1.
     - theta_lower_limit (float, optional): Lower limit for theta. Default is -1.5.
     - theta_upper_limit (float, optional): Upper limit for theta. Default is 3.
@@ -411,8 +412,9 @@ def apply_data_cuts(data, redshift_lower_limit=0.015, redshift_upper_limit_YSE=0
 
     # Require uncertainties on the time of B-band maximum flux of less than some threshold for both the fit to the griz light curve and the gri light curve
     sample = sample[np.logical_and(sample['GRIZ_T0_ERR'] < t0_unc_threshold, sample['GRI_T0_ERR'] < t0_unc_threshold)]
+    sample = sample[np.abs(sample['GRIZ_T0'] - sample['GRI_T0']) < t0_agreement_threshold]
     if print_summary:
-        print(f"t0 uncertainty < 1 day:          {len(sample)} (YSE: {len(sample[sample['SURVEY'] == 'YSE'])}, Foundation: {len(sample[sample['SURVEY'] == 'FOUNDATION'])})")
+        print(f"T0 Cut:                          {len(sample)} (YSE: {len(sample[sample['SURVEY'] == 'YSE'])}, Foundation: {len(sample[sample['SURVEY'] == 'FOUNDATION'])})")
 
     # Av requirement
     sample = sample[sample['GRIZ_AV'] < Av_upper_limit]
@@ -458,8 +460,9 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
         subset = data[data['SURVEY'] == survey.upper()]
 
         redshift_final, mu_LCDM = model_for_plotting(subset['REDSHIFT_FINAL'])
+        sigma = get_peculiar_velocity_unc(redshift_final, subset['SIGMA_Z'], sigma_pec=150)
         mu = subset[fit_filters.upper()+'_MU']
-        mu_err = subset[fit_filters.upper()+'_MU_ERR']
+        mu_err = np.sqrt(subset[fit_filters.upper()+'_MU_ERR']**2 + sigma**2)
 
         if dust_corrected and len(fit_filters) == 1:
             wave = wave_dict[fit_filters]
@@ -495,13 +498,19 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
 
 
 
-def compute_intrinsic_abs_magnitude(y, yerr, hmc_kwargs={}):
+def compute_intrinsic_abs_magnitude(y, yerr, survey_mask=None, hmc_kwargs={}):
 
-    def model(y, yerr):
-        mu = numpyro.sample("M_0_z_int", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
-        sigma = numpyro.sample("sigma_2_res_0", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+    def model(y, yerr, survey_mask):
+        mu = numpyro.sample("M_0_int", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
         
-        numpyro.sample("obs", dist.Normal( mu, jnp.sqrt(sigma + yerr**2)), obs=y)
+        if survey_mask is None:
+            sigma_2 = numpyro.sample("sigma_2_res", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+        else:
+            sigma_2_YSE = numpyro.sample("sigma_2_res_YSE", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_Foundation = numpyro.sample("sigma_2_res_Foundation", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2 = sigma_2_YSE*survey_mask + sigma_2_Foundation*(1-survey_mask)
+            
+        numpyro.sample("obs", dist.Normal( mu, jnp.sqrt(sigma_2 + yerr**2)), obs=y)
 
     rng_key = random.PRNGKey(0)
     rng_key, rng_key_ = random.split(rng_key)
@@ -510,22 +519,53 @@ def compute_intrinsic_abs_magnitude(y, yerr, hmc_kwargs={}):
     num_warmup = hmc_kwargs.pop('num_warmup', 4000)
     num_samples = hmc_kwargs.pop('num_samples', 10_000)
     sampler = MCMC(kernel, num_samples=num_samples, num_warmup=num_warmup, **hmc_kwargs)
-    sampler.run(rng_key_, y, yerr)
+    sampler.run(rng_key_, y, yerr, survey_mask)
+
+    return sampler
+    
+
+
+def compute_sigma_res(y, yerr, survey_mask=None, hmc_kwargs={}):
+
+    def model(y, yerr, survey_mask):
+        if survey_mask is None:
+            sigma_2 = numpyro.sample("sigma_2_res", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+        else:
+            sigma_2_YSE = numpyro.sample("sigma_2_res_YSE", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_Foundation = numpyro.sample("sigma_2_res_Foundation", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2 = sigma_2_YSE*survey_mask + sigma_2_Foundation*(1-survey_mask)
+            
+        numpyro.sample("obs", dist.Normal(0, jnp.sqrt(sigma_2 + yerr**2)), obs=y)
+
+    rng_key = random.PRNGKey(0)
+    rng_key, rng_key_ = random.split(rng_key)
+    
+    kernel = NUTS(model)
+    num_warmup = hmc_kwargs.pop('num_warmup', 4000)
+    num_samples = hmc_kwargs.pop('num_samples', 10_000)
+    sampler = MCMC(kernel, num_samples=num_samples, num_warmup=num_warmup, **hmc_kwargs)
+    sampler.run(rng_key_, y, yerr, survey_mask)
 
     return sampler
 
 
 
-def compute_stretch_lum_relation(x, xerr, y, yerr, hmc_kwargs={}):
+def compute_stretch_lum_relation(x, xerr, y, yerr, survey_mask=None, hmc_kwargs={}):
 
-    def model(x, xerr, y, yerr):
+    def model(x, xerr, y, yerr, survey_mask):
         a = numpyro.sample("a", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
         b = numpyro.sample("b", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
-        sigma_2_res_theta = numpyro.sample("sigma_2_res_theta", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+        
+        if survey_mask is None:
+            sigma_2_res = numpyro.sample("sigma_2_res", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+        else:
+            sigma_2_YSE = numpyro.sample("sigma_2_res_YSE", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_Foundation = numpyro.sample("sigma_2_res_Foundation", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_res = sigma_2_YSE*survey_mask + sigma_2_Foundation*(1-survey_mask)
         
         obs_x = numpyro.sample("obs_x", dist.Normal(x, xerr), obs=x)
         with numpyro.plate('data', len(x)):
-            numpyro.sample("obs_y", dist.Normal( (a*obs_x) + b, jnp.sqrt(sigma_2_res_theta + yerr**2)), obs=y)
+            numpyro.sample("obs_y", dist.Normal( (a*obs_x) + b, jnp.sqrt(sigma_2_res + yerr**2)), obs=y)
 
     rng_key = random.PRNGKey(0)
     rng_key, rng_key_ = random.split(rng_key)
@@ -534,7 +574,7 @@ def compute_stretch_lum_relation(x, xerr, y, yerr, hmc_kwargs={}):
     num_warmup = hmc_kwargs.pop('num_warmup', 4000)
     num_samples = hmc_kwargs.pop('num_samples', 10_000)
     sampler = MCMC(kernel, num_samples=num_samples, num_warmup=num_warmup, **hmc_kwargs)
-    sampler.run(rng_key_, x, xerr, y, yerr)
+    sampler.run(rng_key_, x, xerr, y, yerr, survey_mask)
 
     return sampler
 
@@ -556,9 +596,9 @@ def plot_stretch_lum_relation(x, xerr, y, yerr, survey_mask=None, samples=None):
         linear_model = (np.mean(samples['a'])*thetas) + np.mean(samples['b'])
 
         ax.plot(thetas, linear_model, c='tab:red', ls='-',
-                label=f"$a$ = {np.std(samples['a']):.3f} $\\pm$ {np.std(samples['a']):.3f}\n$b$ = {np.mean(samples['b']):.3f} $\\pm$ {np.std(samples['b']):.3f}")
-        ax.fill_between(thetas, linear_model-np.mean(np.sqrt(samples['sigma_2_res_theta'])), linear_model+np.mean(np.sqrt(samples['sigma_2_res_theta'])), color='tab:red', alpha=0.2,
-                        label="$\\sigma_{res, \\theta}$ ="+f"{np.mean(np.sqrt(samples['sigma_2_res_theta'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_theta'])):.3f}")
+                label=f"$a$ = {np.mean(samples['a']):.3f} $\\pm$ {np.std(samples['a']):.3f}\n$b$ = {np.mean(samples['b']):.3f} $\\pm$ {np.std(samples['b']):.3f}")
+        ax.fill_between(thetas, linear_model-np.mean(np.sqrt(samples['sigma_2_res'])), linear_model+np.mean(np.sqrt(samples['sigma_2_res'])), color='tab:red', alpha=0.2,
+                        label="$\\sigma_{res, \\theta}$ ="+f"{np.mean(np.sqrt(samples['sigma_2_res'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res'])):.3f}")
 
     ax.legend()
     ax.set_xlabel('$\\theta_{gri}$')
@@ -570,17 +610,28 @@ def plot_stretch_lum_relation(x, xerr, y, yerr, survey_mask=None, samples=None):
 
 
 
-def compute_mass_step(x, y, yerr, M_split=10, hmc_kwargs={}):
+def compute_mass_step(x, y, yerr, M_split=10, survey_mask=None, hmc_kwargs={}):
 
-    def model(x, y, yerr, M_split):
+    def model(x, y, yerr, M_split, survey_mask):
         mass_mask = x < M_split
 
-        Delta_LM = numpyro.sample("Delta_LM", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
-        Delta_HR = numpyro.sample("Delta_HR", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
-        sigma_2_res_LM = numpyro.sample("sigma_2_res_LM", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
-        sigma_2_res_HM = numpyro.sample("sigma_2_res_HM", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+        delta_LM = numpyro.sample("delta_LM", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
+        gamma = numpyro.sample("gamma", dist.ImproperUniform(dist.constraints.real, (), event_shape=()))
 
-        numpyro.sample("obs", dist.Normal(Delta_LM + Delta_HR*(1-mass_mask), jnp.sqrt(sigma_2_res_LM*mass_mask + sigma_2_res_HM*(1-mass_mask) + yerr**2)), obs=y)
+        if survey_mask is None:
+            sigma_2_res_LM = numpyro.sample("sigma_2_res_LM", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_res_HM = numpyro.sample("sigma_2_res_HM", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+
+        else:
+            sigma_2_res_LM_YSE = numpyro.sample("sigma_2_res_LM_YSE", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_res_HM_YSE = numpyro.sample("sigma_2_res_HM_YSE", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_res_LM_Foundation = numpyro.sample("sigma_2_res_LM_Foundation", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+            sigma_2_res_HM_Foundation = numpyro.sample("sigma_2_res_HM_Foundation", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
+
+            sigma_2_res_LM = sigma_2_res_LM_YSE*survey_mask + sigma_2_res_LM_Foundation*(1-survey_mask)
+            sigma_2_res_HM = sigma_2_res_HM_YSE*survey_mask + sigma_2_res_HM_Foundation*(1-survey_mask)
+
+        numpyro.sample("obs", dist.Normal(delta_LM + gamma*(1-mass_mask), jnp.sqrt(sigma_2_res_LM*mass_mask + sigma_2_res_HM*(1-mass_mask) + yerr**2)), obs=y)
 
     rng_key = random.PRNGKey(0)
     rng_key, rng_key_ = random.split(rng_key)
@@ -589,7 +640,7 @@ def compute_mass_step(x, y, yerr, M_split=10, hmc_kwargs={}):
     num_warmup = hmc_kwargs.pop('num_warmup', 4000)
     num_samples = hmc_kwargs.pop('num_samples', 10_000)
     sampler = MCMC(kernel, num_samples=num_samples, num_warmup=num_warmup, **hmc_kwargs)
-    sampler.run(rng_key_, x, y, yerr, M_split)
+    sampler.run(rng_key_, x, y, yerr, M_split, survey_mask)
     
     return sampler
 
@@ -625,22 +676,31 @@ def plot_mass_step(data, fit_filters='griz', M_split=10, samples=None, dust_corr
         ymin, ymax = ax.get_ylim()
         ywidth = ymax - ymin
 
-        Delta_LM = np.mean(samples['Delta_LM'])
-        Delta_LM_unc = np.std(samples['Delta_LM'])
-        Delta_HM = np.mean(samples['Delta_LM']) + np.mean(samples['Delta_HR'])
-        Delta_HM_unc = np.sqrt(np.std(samples['Delta_HR'])**2 - np.std(samples['Delta_LM'])**2)
+        delta_LM = np.mean(samples['delta_LM'])
+        delta_LM_unc = np.std(samples['delta_LM'])
+        delta_HM = np.mean(samples['delta_LM']) + np.mean(samples['gamma'])
+        delta_HM_unc = np.sqrt(np.std(samples['gamma'])**2 - np.std(samples['delta_LM'])**2)
 
-        ax.axhline(Delta_LM, 0, (M_split - xmin)/xwidth, ls='-', color='crimson')
-        ax.axhspan(Delta_LM-Delta_LM_unc, Delta_LM+Delta_LM_unc, 0, (M_split - xmin)/xwidth, ls='-', color='crimson', alpha=0.2)
+        ax.axhline(delta_LM, 0, (M_split - xmin)/xwidth, ls='-', color='crimson')
+        ax.axhspan(delta_LM-delta_LM_unc, delta_LM+delta_LM_unc, 0, (M_split - xmin)/xwidth, ls='-', color='crimson', alpha=0.2)
 
-        ax.axhline(Delta_HM, (M_split - xmin)/xwidth, 1, ls='-', color='crimson')
-        ax.axhspan(Delta_HM-Delta_HM_unc, Delta_HM+Delta_HM_unc, (M_split - xmin)/xwidth, 1, ls='-', color='crimson', alpha=0.2)
+        ax.axhline(delta_HM, (M_split - xmin)/xwidth, 1, ls='-', color='crimson')
+        ax.axhspan(delta_HM-delta_HM_unc, delta_HM+delta_HM_unc, (M_split - xmin)/xwidth, 1, ls='-', color='crimson', alpha=0.2)
 
-        ax.text(6.75, ymin+(0.24*ywidth), '$\\sigma_{res, LM}$'+f": {np.sqrt(np.median(samples['sigma_2_res_LM'])):.3f}", fontsize=16)
-        ax.text(6.75, ymin+(0.1*ywidth), '$\\sigma_{res, HM}$'+f": {np.sqrt(np.median(samples['sigma_2_res_HM'])):.3f}", fontsize=16)
+        try:
+            ax.text(6.75, ymin+(0.24*ywidth), '$\\sigma_{res, LM}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_LM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM'])):.3f}", fontsize=16)
+            ax.text(6.75, ymin+(0.1*ywidth), '$\\sigma_{res, HM}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_HM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM'])):.3f}", fontsize=16)
+        except:
+            ax.text(6.75, ymin+(0.3*ywidth), '$\\sigma_{res, LM}$: ', fontsize=16)
+            ax.text(7.6, ymin+(0.3*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f}", fontsize=16, color='tab:blue')
+            ax.text(7.6, ymin+(0.22*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f}", fontsize=16, color='tab:green')
+            
+            ax.text(6.75, ymin+(0.12*ywidth), '$\\sigma_{res, HM}$: ', fontsize=16)
+            ax.text(7.6, ymin+(0.12*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f}", fontsize=16, color='tab:blue')
+            ax.text(7.6, ymin+(0.04*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f}", fontsize=16, color='tab:green')
 
         rms = np.sqrt(np.mean(np.array(y)**2))
-        ax.text(6.75, ymin+(0.85*ywidth), f"RMS={rms:.3f}", fontsize=16)
+        ax.text(6.75, ymin+(0.85*ywidth), f"$\\gamma$: {np.mean(samples['gamma']):.3f} $\\pm$ {np.std(samples['gamma']):.3f}", fontsize=16)
 
     ax.set_xlabel('Log$_{10}(M_{*} / M_{\odot})$')
     ax.set_ylabel('$\\mu_{'+fit_filters+'} - \\mu_{\\Lambda CDM}(z)$')
