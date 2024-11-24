@@ -8,8 +8,10 @@ import extinction
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS
+import jax
 from jax import random
 import jax.numpy as jnp
+jax.config.update("jax_enable_x64", True)
 
 try:
     from bayesn import SEDmodel
@@ -108,7 +110,7 @@ def get_peculiar_velocity_unc(z_HD, sigma_z, sigma_pec=150):
     speed_of_light = ac.c.value / 1000  # km/s
     
     # Formula to calculate uncertainty in peculiar velocity
-    peculiar_velocity_unc = np.sqrt(((sigma_pec/speed_of_light)**2 + sigma_z**2) * (5 / (np.log(10) * z_HD))**2)
+    peculiar_velocity_unc = np.sqrt( ( (sigma_pec/speed_of_light)**2 + sigma_z**2 ) * (5 / (np.log(10) * z_HD))**2)
     
     return peculiar_velocity_unc  # Return the calculated uncertainty
 
@@ -223,8 +225,8 @@ def plot_multi_bayesn_fits(snid, meta, lc, griz_chains = None, gri_chains = None
             [bar.set_alpha(0.3) for bar in bars]
             ax[(f1*2)+1,f2].axhline(0, 0, 1, color='dimgray', ls='--', zorder=1)
             ax[(f1*2)+1,f2].set_xlabel('Phase [days]')
-        ax[f1*2,0].set_ylabel('Magnitude')
-        ax[(f1*2)+1,0].set_ylabel('Residual')
+        ax[f1*2,0].set_ylabel('Mag.')
+        ax[(f1*2)+1,0].set_ylabel('Resid.')
 
     for chains_tag in chains_tags.keys():
         chains = np.load(chains_tags[chains_tag], allow_pickle=True).item()
@@ -563,9 +565,9 @@ def compute_stretch_lum_relation(x, xerr, y, yerr, survey_mask=None, hmc_kwargs=
             sigma_2_Foundation = numpyro.sample("sigma_2_res_Foundation", dist.ImproperUniform(dist.constraints.greater_than(0), (), event_shape=()))
             sigma_2_res = sigma_2_YSE*survey_mask + sigma_2_Foundation*(1-survey_mask)
         
-        obs_x = numpyro.sample("obs_x", dist.Normal(x, xerr), obs=x)
         with numpyro.plate('data', len(x)):
-            numpyro.sample("obs_y", dist.Normal( (a*obs_x) + b, jnp.sqrt(sigma_2_res + yerr**2)), obs=y)
+            true_x = numpyro.sample("true_x", dist.Normal(x, xerr))
+            numpyro.sample("y", dist.Normal( (a*true_x) + b, jnp.sqrt(sigma_2_res + yerr**2)), obs=y)
 
     rng_key = random.PRNGKey(0)
     rng_key, rng_key_ = random.split(rng_key)
@@ -637,8 +639,8 @@ def compute_mass_step(x, y, yerr, M_split=10, survey_mask=None, hmc_kwargs={}):
     rng_key, rng_key_ = random.split(rng_key)
     
     kernel = NUTS(model)
-    num_warmup = hmc_kwargs.pop('num_warmup', 4000)
-    num_samples = hmc_kwargs.pop('num_samples', 10_000)
+    num_warmup = hmc_kwargs.pop('num_warmup', 5000)
+    num_samples = hmc_kwargs.pop('num_samples', 15_000)
     sampler = MCMC(kernel, num_samples=num_samples, num_warmup=num_warmup, **hmc_kwargs)
     sampler.run(rng_key_, x, y, yerr, M_split, survey_mask)
     
@@ -702,7 +704,7 @@ def plot_mass_step(data, fit_filters='griz', M_split=10, samples=None, dust_corr
         rms = np.sqrt(np.mean(np.array(y)**2))
         ax.text(6.75, ymin+(0.85*ywidth), f"$\\gamma$: {np.mean(samples['gamma']):.3f} $\\pm$ {np.std(samples['gamma']):.3f}", fontsize=16)
 
-    ax.set_xlabel('Log$_{10}(M_{*} / M_{\odot})$')
+    ax.set_xlabel('$\\log_{10}(M_{*} / M_{\odot})$')
     ax.set_ylabel('$\\mu_{'+fit_filters+'} - \\mu_{\\Lambda CDM}(z)$')
 
     return fig, ax

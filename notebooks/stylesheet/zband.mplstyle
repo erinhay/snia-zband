@@ -1,5 +1,5 @@
 font.family : serif
-mathtext.default: regular
+mathtext.fontset: stix
 axes.titlesize : 24
 axes.labelsize : 20
 
