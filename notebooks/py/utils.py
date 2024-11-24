@@ -20,8 +20,9 @@ except:
 
 
 wave_dict = {'g': 4810, 'r': 6170, 'i': 7520, 'z': 8600} # in AA
-
-
+blue = '#529dd1'
+green = 'green'
+red = 'crimson'
 
 def heliocorr(zhel, RA, Dec):
     """
@@ -147,7 +148,7 @@ def model_for_plotting(zs, H0=73.24, Omega_m=0.28):
 
 
 
-def plot_single_bayesn_fit(snid, meta, lc, chains = None, color_dict={'G': 'tab:green', 'R': 'tab:red', 'I': 'tab:purple', 'Z': 'tab:orange'}):
+def plot_single_bayesn_fit(snid, meta, lc, chains = None, color_dict={'G': green, 'R': red, 'I': 'tab:purple', 'Z': 'tab:orange'}):
 
     chains = np.load(chains, allow_pickle=True).item()
     times = np.arange(-10, 40+0.5, 0.5)
@@ -205,7 +206,7 @@ def plot_multi_bayesn_fits(snid, meta, lc, griz_chains = None, gri_chains = None
     ax[2,0].invert_yaxis()
 
     times = np.arange(-10, 40+0.5, 0.5)
-    color_dict_fitted = {'GRIZ': 'tab:blue', 'GRI': 'tab:green', 'Z': 'tab:orange'}
+    color_dict_fitted = {'GRIZ': blue, 'GRI': green, 'Z': red}
     ls_dict = {'griz': '-', 'gri': '--', 'z': '-.'}
     
     chains_tags = {}
@@ -269,7 +270,7 @@ def plot_multi_bayesn_fits(snid, meta, lc, griz_chains = None, gri_chains = None
 
 
 
-def plot_histogram(data, key, bins=None):
+def plot_histogram(data, key, bins=None, split_by_survey=False):
     """
     Plots histogram.
 
@@ -277,10 +278,12 @@ def plot_histogram(data, key, bins=None):
     - data (DataFrame): DataFrame containing the data to be plotted.
     - key (str): The key indicating which data column to plot. Must be one of: 'REDSHIFT_FINAL', 'LOG_HOSTMASS', or contain 'THETA' or 'AV'.
     - bins (array-like or int, optional): Bins for histogram. If key is not in supported list, then bins must be specified.
+    - bins (bool, optional): Whether to plot the 'THETA' or 'AV' distributions by survey.
 
     Returns:
     - fig (matplotlib.figure.Figure): The generated matplotlib figure.
     """
+    survey_mask = np.repeat(True, len(data))
     fig = plt.figure()
 
     # Setting up bins and labels based on the key
@@ -295,11 +298,15 @@ def plot_histogram(data, key, bins=None):
         loc = 'upper right'
 
     elif 'THETA' in key:
+        if split_by_survey:
+            survey_mask = data['SURVEY'] == 'YSE'
         bins = np.arange(-2, 4, 0.5)
         plt.xlabel('$\\theta$')
         loc = 'upper right'
     
     elif 'AV' in key:
+        if split_by_survey:
+            survey_mask = data['SURVEY'] == 'YSE'
         bins = np.arange(0, 1.2, 0.1)
         plt.xlabel('$A_{V}$')
         loc = 'upper right'
@@ -315,8 +322,16 @@ def plot_histogram(data, key, bins=None):
         plt.hist(other_survey_data[other_survey_data['SURVEY'] == 'CfA'][key], bins=bins, color='k', ls='-.', histtype='step', lw=2, label='CfA', zorder=2)
 
     # Histogram for YSE+Foundation data
-    plt.hist(data[key], bins=bins, color='tab:blue', alpha=0.5, label='YSE+Foundation', zorder=1)
-    plt.hist(data[key], bins=bins, color='tab:blue', histtype='step', lw=2, zorder=1)
+    if split_by_survey:
+        plt.hist(data[key][~survey_mask], bins=bins, color=blue, alpha=0.5, label='Foundation', zorder=1)
+        plt.hist(data[key][~survey_mask], bins=bins, color=blue, histtype='step', lw=2, zorder=1)
+
+        plt.hist(data[key][survey_mask], bins=bins, color=green, alpha=0.5, label='YSE', zorder=1)
+        plt.hist(data[key][survey_mask], bins=bins, color=green, histtype='step', lw=2, zorder=1)
+
+    else:
+        plt.hist(data[key], bins=bins, color=blue, alpha=0.5, label='YSE+Foundation', zorder=1)
+        plt.hist(data[key], bins=bins, color=blue, histtype='step', lw=2, zorder=1)
 
     # Adding labels, legend, and adjusting layout
     plt.ylabel('Number of SNe Ia')
@@ -445,7 +460,7 @@ def apply_data_cuts(data, redshift_lower_limit=0.015, redshift_upper_limit_YSE=0
 
 
 
-def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors={'YSE': 'tab:green', 'Foundation': 'tab:blue'}):
+def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors={'YSE': green, 'Foundation': blue}, markers={'YSE': 's', 'Foundation': 'o'}):
     """
     Plots Hubble diagram for BayeSN fits to specified subset of data.
     """
@@ -477,10 +492,10 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
         resid = mu - mu_LCDM
         resids += list(resid)
 
-        _, _, bars = ax[0].errorbar(redshift_final, mu, yerr=mu_err, color=colors[survey], ls='None', marker='.', label=survey)
+        _, _, bars = ax[0].errorbar(redshift_final, mu, yerr=mu_err, color=colors[survey], ls='None', marker=markers[survey], ms=5, label=survey)
         [bar.set_alpha(0.25) for bar in bars]
 
-        _, _, bars = ax[1].errorbar(redshift_final, resid, yerr=mu_err, color=colors[survey], ls='None', marker='.')
+        _, _, bars = ax[1].errorbar(redshift_final, resid, yerr=mu_err, color=colors[survey], ls='None', marker=markers[survey], ms=5)
         [bar.set_alpha(0.25) for bar in bars]
 
     rms = np.sqrt(np.mean(np.array(resids)**2))
@@ -489,8 +504,8 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
     ax[0].text(xloc, yloc, 'RMS = '+str(round(rms, 3)), fontsize=14)
 
     ax[1].set_xlabel('$z$')
-    ax[0].set_ylabel('$\mu$')
-    ax[1].set_ylabel('$\mu - \mu_{\Lambda CDM}(z)$')
+    ax[0].set_ylabel('$\\mu$')
+    ax[1].set_ylabel('$\\mu - \\mu_{\\Lambda \\rm{CDM}}(z)$')
     ax[0].set_title('$'+fit_filters+'$ Hubble Diagram')
     ax[0].legend(fontsize=12)
     fig.align_labels()
@@ -587,24 +602,24 @@ def plot_stretch_lum_relation(x, xerr, y, yerr, survey_mask=None, samples=None):
     ax.invert_yaxis()
 
     _, _, bars = ax.errorbar(x[~survey_mask], y[~survey_mask], xerr=xerr[~survey_mask], yerr=yerr[~survey_mask],
-                             color='tab:blue', ls='None', marker='.', label='Foundation')
+                             color=blue, ls='None', marker='o', ms=5, label='Foundation')
     [bar.set_alpha(0.25) for bar in bars]
     _, _, bars = ax.errorbar(x[survey_mask], y[survey_mask], xerr=xerr[survey_mask], yerr=yerr[survey_mask],
-                             color='tab:green', ls='None', marker='.', label='YSE')
+                             color=green, ls='None', marker='s', ms=5, label='YSE')
     [bar.set_alpha(0.25) for bar in bars]
 
     if not samples == None:
         thetas = np.arange(-1.55, 3.15, 0.2)
         linear_model = (np.mean(samples['a'])*thetas) + np.mean(samples['b'])
 
-        ax.plot(thetas, linear_model, c='tab:red', ls='-',
+        ax.plot(thetas, linear_model, c=red, ls='-',
                 label=f"$a$ = {np.mean(samples['a']):.3f} $\\pm$ {np.std(samples['a']):.3f}\n$b$ = {np.mean(samples['b']):.3f} $\\pm$ {np.std(samples['b']):.3f}")
-        ax.fill_between(thetas, linear_model-np.mean(np.sqrt(samples['sigma_2_res'])), linear_model+np.mean(np.sqrt(samples['sigma_2_res'])), color='tab:red', alpha=0.2,
-                        label="$\\sigma_{res, \\theta}$ ="+f"{np.mean(np.sqrt(samples['sigma_2_res'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res'])):.3f}")
+        ax.fill_between(thetas, linear_model-np.mean(np.sqrt(samples['sigma_2_res'])), linear_model+np.mean(np.sqrt(samples['sigma_2_res'])), color=red, alpha=0.2,
+                        label="$\\sigma_{\\rm{res}, \\theta}$ ="+f"{np.mean(np.sqrt(samples['sigma_2_res'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res'])):.3f}")
 
     ax.legend()
     ax.set_xlabel('$\\theta_{gri}$')
-    ax.set_ylabel('$M_{z, int}$')
+    ax.set_ylabel('$M_{z, \\rm{int}}$')
 
     fig.align_labels()
     fig.tight_layout()
@@ -667,9 +682,9 @@ def plot_mass_step(data, fit_filters='griz', M_split=10, samples=None, dust_corr
 
         y = y - ext_mag
 
-    _, _, bars = ax.errorbar(x[~survey_mask], y[~survey_mask], yerr[~survey_mask], color='tab:blue', ls='None', marker='.')
+    _, _, bars = ax.errorbar(x[~survey_mask], y[~survey_mask], yerr[~survey_mask], color=blue, ls='None', marker='o', ms=5)
     [bar.set_alpha(0.25) for bar in bars]
-    _, _, bars = ax.errorbar(x[survey_mask], y[survey_mask], yerr[survey_mask], color='tab:green', ls='None', marker='.')
+    _, _, bars = ax.errorbar(x[survey_mask], y[survey_mask], yerr[survey_mask], color=green, ls='None', marker='s', ms=5)
     [bar.set_alpha(0.25) for bar in bars]
 
     if not samples == None:
@@ -690,21 +705,21 @@ def plot_mass_step(data, fit_filters='griz', M_split=10, samples=None, dust_corr
         ax.axhspan(delta_HM-delta_HM_unc, delta_HM+delta_HM_unc, (M_split - xmin)/xwidth, 1, ls='-', color='crimson', alpha=0.2)
 
         try:
-            ax.text(6.75, ymin+(0.24*ywidth), '$\\sigma_{res, LM}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_LM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM'])):.3f}", fontsize=16)
-            ax.text(6.75, ymin+(0.1*ywidth), '$\\sigma_{res, HM}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_HM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM'])):.3f}", fontsize=16)
+            ax.text(6.75, ymin+(0.24*ywidth), '$\\sigma_{\\rm{res, LM}}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_LM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM'])):.3f}", fontsize=16)
+            ax.text(6.75, ymin+(0.1*ywidth), '$\\sigma_{\\rm{res, HM}}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_HM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM'])):.3f}", fontsize=16)
         except:
-            ax.text(6.75, ymin+(0.3*ywidth), '$\\sigma_{res, LM}$: ', fontsize=16)
-            ax.text(7.6, ymin+(0.3*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f}", fontsize=16, color='tab:blue')
-            ax.text(7.6, ymin+(0.22*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f}", fontsize=16, color='tab:green')
+            ax.text(6.75, ymin+(0.3*ywidth), '$\\sigma_{\\rm{res, LM}}$: ', fontsize=16)
+            ax.text(7.5, ymin+(0.3*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f}", fontsize=16, color=blue)
+            ax.text(7.5, ymin+(0.22*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f}", fontsize=16, color=green)
             
-            ax.text(6.75, ymin+(0.12*ywidth), '$\\sigma_{res, HM}$: ', fontsize=16)
-            ax.text(7.6, ymin+(0.12*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f}", fontsize=16, color='tab:blue')
-            ax.text(7.6, ymin+(0.04*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f}", fontsize=16, color='tab:green')
+            ax.text(6.75, ymin+(0.12*ywidth), '$\\sigma_{\\rm{res, HM}}$: ', fontsize=16)
+            ax.text(7.5, ymin+(0.12*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f}", fontsize=16, color=blue)
+            ax.text(7.5, ymin+(0.04*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f}", fontsize=16, color=green)
 
         rms = np.sqrt(np.mean(np.array(y)**2))
         ax.text(6.75, ymin+(0.85*ywidth), f"$\\gamma$: {np.mean(samples['gamma']):.3f} $\\pm$ {np.std(samples['gamma']):.3f}", fontsize=16)
 
     ax.set_xlabel('$\\log_{10}(M_{*} / M_{\odot})$')
-    ax.set_ylabel('$\\mu_{'+fit_filters+'} - \\mu_{\\Lambda CDM}(z)$')
+    ax.set_ylabel('$\\mu_{'+fit_filters+'} - \\mu_{\\Lambda \\rm{CDM}}(z)$')
 
     return fig, ax
