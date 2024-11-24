@@ -69,7 +69,7 @@ In this folder, you will find three tables:
   * `PEAKMAG_X_DUSTCORR_THETACORR`: the peak dust-corrected, assuming Rv = 2.61 and Av = GRI_AV, and stretch-corrected magnitude for filter X
   * `PEAKMAG_X_DUSTCORR_THETACORR_ERR`: the uncertainty on PEAKMAG_X_DUSTCORR_THETACORR for filter X
   * `X_EXT`: the extinction in filter X assuming Rv = 2.61 and Av = GRI_AV
-* `diff_Rv_Grayling.csv`: a table with the parameter estimates for the fits assuming different Rv values; the columns have the same names as in `full.csv`, but with the additional prefixes of:
+* `diff_Rv_Grayling.csv`: a table with the parameter estimates for the fits assuming different Rv values (Rv values from Grayling M., et al., 2024, [MNRAS](https://doi.org/10.1093/mnras/stae1202), [531, 953](https://ui.adsabs.harvard.edu/abs/2024MNRAS.531..953G/abstract)); the columns have the same names as in `full.csv`, but with the additional prefixes of:
   * `LOWRV_`: indicates the parameter was fit assuming Rv = 2.39
   * `HIGHRV_`: indicates the parameter was fit assuming Rv = 3.14
 * `other_surveys_comp_data.csv`: a table with the redshifts and host galaxy masses for the iPTF, CSP, and CfA samples used in other similar analyses of SNe Ia in the NIR; used to create Figures 1 and 2 in Hayes+2024
