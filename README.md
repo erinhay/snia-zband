@@ -15,13 +15,13 @@ The data for this project comes from the publicly available Young Supernova Expe
 * Jones D.O., et al., 2019, [ApJ](http://dx.doi.org/10.3847/1538-4357/ab2bec), [881, 19](https://ui.adsabs.harvard.edu/abs/2019ApJ...881...19J/abstract)
 
 ## Notebooks
-In this folder, there is a notebook which recreates the figures in Hayes+24. You will also find a py script (`py/utils.py`) and a stylesheet (`stylesheet/zband.mplstyle`) to assist with plotting in the notebook. 
+In this folder, there are a set of jupyter notebooks that recreate versions of the figures in Hayes+24. You will also find a py script (`py/utils.py`) and a stylesheet (`stylesheet/zband.mplstyle`) to assist with plotting in the notebooks. 
 
-The example notebook takes advantage of the data available in the Tables folder in this repository. You may adjust choices of the sample selection cuts, mass step location, or subset of data included in the BayeSN fits to see the effects on the RMS of the Hubble residuals and the size of the mass step.
+The notebooks takes advantage of the data available in the Tables folder in this repository. You may adjust choices of the sample selection cuts, mass step location, or subset of data included in the BayeSN fits to see the effects on the RMS of the Hubble residuals and the size of the mass step.
 
 ## Tables
 In this folder, you will find three tables:
-* `full.csv`: a table with the necessary data to re-create the sample and results from Hayes+2024; the columns in the table are:
+* `full.csv`: a table with the necessary data to re-create the sample and results from Hayes+2024
   * `SNID`: the name of each object
   * `SURVEY`: if the object comes from YSE DR1 ("YSE") or Founation DR1 ("FOUNDATION")
   * `RA`: the right ascension of the object, in degrees
@@ -69,6 +69,9 @@ In this folder, you will find three tables:
   * `PEAKMAG_X_DUSTCORR_THETACORR`: the peak dust-corrected, assuming Rv = 2.61 and Av = GRI_AV, and stretch-corrected magnitude for filter X
   * `PEAKMAG_X_DUSTCORR_THETACORR_ERR`: the uncertainty on PEAKMAG_X_DUSTCORR_THETACORR for filter X
   * `X_EXT`: the extinction in filter X assuming Rv = 2.61 and Av = GRI_AV
+* `diff_Rv_Grayling.csv`: a table with the parameter estimates for the fits assuming different Rv values; the columns have the same names as in `full.csv`, but with the additional prefixes of:
+  * `LOWRV_`: indicates the parameter was fit assuming Rv = 2.39
+  * `HIGHRV_`: indicates the parameter was fit assuming Rv = 3.14
 * `other_surveys_comp_data.csv`: a table with the redshifts and host galaxy masses for the iPTF, CSP, and CfA samples used in other similar analyses of SNe Ia in the NIR; used to create Figures 1 and 2 in Hayes+2024
 
 These three tables have all the necessary information to reproduce the figures and results from the paper.
