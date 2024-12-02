@@ -467,9 +467,9 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
 
     resids = []
 
-    fig, ax = plt.subplots(2, 1, figsize=(5,5), gridspec_kw={'height_ratios': [3, 1]}, sharex=True)
+    fig, ax = plt.subplots(2, 1, figsize=(6,6), gridspec_kw={'height_ratios': [2, 1]}, sharex=True)
 
-    zs, model = model_for_plotting(np.linspace(np.min(data['REDSHIFT_FINAL'])-0.0008, np.max(data['REDSHIFT_FINAL'])+0.0008, 50))
+    zs, model = model_for_plotting(np.linspace(np.min(data['REDSHIFT_FINAL'])-0.002, np.max(data['REDSHIFT_FINAL'])+0.008, 50))
     ax[0].plot(zs, model, color='dimgray')
     ax[1].axhline(0, xmin=0, xmax=1, ls='-', c='dimgray')
 
@@ -477,9 +477,12 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
         subset = data[data['SURVEY'] == survey.upper()]
 
         redshift_final, mu_LCDM = model_for_plotting(subset['REDSHIFT_FINAL'])
-        sigma = get_peculiar_velocity_unc(redshift_final, subset['SIGMA_Z'], sigma_pec=150)
         mu = subset[fit_filters.upper()+'_MU']
-        mu_err = np.sqrt(subset[fit_filters.upper()+'_MU_ERR']**2 + sigma**2)
+        mu_err = subset[fit_filters.upper()+'_MU_ERR']
+        sigma_z = subset['SIGMA_Z']
+
+        propagated_redshift_measurement_unc = get_peculiar_velocity_unc(redshift_final, subset['SIGMA_Z'], sigma_pec=0)
+        resid_err = np.sqrt(subset[fit_filters.upper()+'_MU_ERR']**2 + propagated_redshift_measurement_unc**2)
 
         if dust_corrected and len(fit_filters) == 1:
             wave = wave_dict[fit_filters]
@@ -492,11 +495,19 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
         resid = mu - mu_LCDM
         resids += list(resid)
 
-        _, _, bars = ax[0].errorbar(redshift_final, mu, yerr=mu_err, color=colors[survey], ls='None', marker=markers[survey], ms=5, label=survey)
+        _, _, bars = ax[0].errorbar(redshift_final, mu, xerr=sigma_z, yerr=mu_err, color=colors[survey], ls='None', marker=markers[survey], ms=5, label=survey)
         [bar.set_alpha(0.25) for bar in bars]
 
-        _, _, bars = ax[1].errorbar(redshift_final, resid, yerr=mu_err, color=colors[survey], ls='None', marker=markers[survey], ms=5)
+        _, _, bars = ax[1].errorbar(redshift_final, resid, yerr=resid_err, color=colors[survey], ls='None', marker=markers[survey], ms=5)
         [bar.set_alpha(0.25) for bar in bars]
+
+    xmin, xmax = ax[1].get_xlim()
+
+    model_PV_unc = get_peculiar_velocity_unc(zs, 0., sigma_pec=150)
+    ax[1].plot(zs, model_PV_unc, ls='--', color='dimgray')
+    ax[1].plot(zs, -model_PV_unc, ls='--', color='dimgray')
+    ax[1].set_xlim(xmin, xmax)
+    ax[1].set_ylim(-0.8, 0.8)
 
     rms = np.sqrt(np.mean(np.array(resids)**2))
     xloc = ((np.max(ax[0].get_xlim()) - np.min(ax[0].get_xlim()))* 0.6) + np.min(ax[0].get_xlim())
