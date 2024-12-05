@@ -680,10 +680,11 @@ def plot_mass_step(data, fit_filters='griz', M_split=10, samples=None, dust_corr
     ax.axvline(M_split, color='dimgray')
 
     survey_mask = data['SURVEY'] == 'YSE'
-    _, mu_LCDM = model_for_plotting(data['REDSHIFT_FINAL'])
+    redshift_final, mu_LCDM = model_for_plotting(data['REDSHIFT_FINAL'])
+    sigma = get_peculiar_velocity_unc(redshift_final, sigma_z=data['SIGMA_Z'])
     x = data['LOG_HOSTMASS']
     y = data[f'{fit_filters.upper()}_MU'] - mu_LCDM
-    yerr = data[f'{fit_filters.upper()}_MU_ERR']
+    yerr = np.sqrt(data[f'{fit_filters.upper()}_MU_ERR']**2 + sigma**2)
 
     if dust_corrected and len(fit_filters) == 1:
         wave = wave_dict[fit_filters]
