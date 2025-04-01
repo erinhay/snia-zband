@@ -1,6 +1,6 @@
 # Supplimentary Resources for the Foundation+YSE Analysis of the Cosmological Utility of SNe Ia in the z-band
 
-If you make use of this repository or the analysis in Hayes+24, please cite: Hayes E.E., et al., 2024 ...
+If you make use of this repository or the analysis in Hayes+25, please cite: Hayes E.E., et al., 2025 ...
 
 If you have any questions about this repository or the associated paper, you can direct them to Erin Hayes at eeh55@cam.ac.uk. Thank you!
 
@@ -28,7 +28,8 @@ In this folder, you will find three tables:
   * `DECL`: the declination of the object, in degrees
   * `SUBCLASS`: the subclass of SN Ia (i.e. 91bg, norm)
   * `REDSHIFT_FINAL`: the final, peculiar velocity corrected, redshift (sometimes also referred to as z_HD, for Hubble diagram, in other works)
-  * `LOG_HOSTMASS`: the log stellar mass of the host galaxy associated with each SN
+  * `LOG_HOSTMASS(_ERR)`: the log stellar mass (and uncertainty) of the host galaxy associated with each SN
+  * `LOG_HOSTSFR(_ERR)`: the log star formation rate (and uncertainty) of the host galaxy associated with each SN
   * `GRIZ_MU`: the distance modulus from the griz BayeSN fit
   * `GRIZ_MU_ERR`: the uncertainty on the distance modulus estimate from the griz BayeSN fit
   * `GRIZ_AV`: the dust extinction parameter from the griz BayeSN fit
