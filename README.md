@@ -15,13 +15,13 @@ The data for this project comes from the publicly available Young Supernova Expe
 * Jones D.O., et al., 2019, [ApJ](http://dx.doi.org/10.3847/1538-4357/ab2bec), [881, 19](https://ui.adsabs.harvard.edu/abs/2019ApJ...881...19J/abstract)
 
 ## Notebooks
-In this folder, there are a set of jupyter notebooks that recreate versions of the figures in Hayes+24. You will also find a py script (`py/utils.py`) and a stylesheet (`stylesheet/zband.mplstyle`) to assist with plotting in the notebooks. 
+In this folder, there are a set of jupyter notebooks that recreate versions of the figures in Hayes+25. You will also find a py script (`py/utils.py`) and a stylesheet (`stylesheet/zband.mplstyle`) to assist with plotting in the notebooks. 
 
 The notebooks takes advantage of the data available in the Tables folder in this repository. You may adjust choices of the sample selection cuts, mass step location, or subset of data included in the BayeSN fits to see the effects on the RMS of the Hubble residuals and the size of the mass step.
 
 ## Tables
-In this folder, you will find three tables:
-* `full.csv`: a table with the necessary data to re-create the sample and results from Hayes+2024
+In this folder, you will find two tables:
+* `mnras_table.txt`: a table with the necessary data to re-create the sample and results from Hayes+25
   * `SNID`: the name of each object
   * `SURVEY`: if the object comes from YSE DR1 ("YSE") or Founation DR1 ("FOUNDATION")
   * `RA`: the right ascension of the object, in degrees
@@ -30,52 +30,50 @@ In this folder, you will find three tables:
   * `REDSHIFT_FINAL`: the final, peculiar velocity corrected, redshift (sometimes also referred to as z_HD, for Hubble diagram, in other works)
   * `LOG_HOSTMASS(_ERR)`: the log stellar mass (and uncertainty) of the host galaxy associated with each SN
   * `LOG_HOSTSFR(_ERR)`: the log star formation rate (and uncertainty) of the host galaxy associated with each SN
-  * `GRIZ_MU`: the distance modulus from the griz BayeSN fit
-  * `GRIZ_MU_ERR`: the uncertainty on the distance modulus estimate from the griz BayeSN fit
-  * `GRIZ_AV`: the dust extinction parameter from the griz BayeSN fit
-  * `GRIZ_AV_ERR`: the uncertainty on the dust extinction estimate from the griz BayeSN fit
-  * `GRIZ_THETA`: the light curve stretch parameter from the griz BayeSN fit
-  * `GRIZ_THETA_ERR`: the uncertainty on the stretch estimate from the griz BayeSN fit
-  * `GRIZ_T0`: the time of B-band maximum flux from the griz BayeSN fit, in MJD
-  * `GRIZ_T0_ERR`: the uncertainty on the T0 estimate from the griz BayeSN fit, in MJD
-  * `GRIZ_REDCHI2`: the reduced chi squared for the light curve fit from the griz BayeSN fit
-  * `GRI_MU`: the distance modulus from the gri BayeSN fit
-  * `GRI_MU_ERR`: the uncertainty on the distance modulus estimate from the gri BayeSN fit
-  * `GRI_AV`: the dust extinction parameter from the gri BayeSN fit
-  * `GRI_AV_ERR`: the uncertainty on the dust extinction estimate from the gri BayeSN fit
-  * `GRI_THETA`: the light curve stretch parameter from the gri BayeSN fit
-  * `GRI_THETA_ERR`: the uncertainty on the stretch estimate from the gri BayeSN fit
-  * `GRI_T0`: the time of B-band maximum flux from the gri BayeSN fit, in MJD
-  * `GRI_T0_ERR`: the uncertainty on the T0 estimate from the gri BayeSN fit, in MJD
-  * `Z_MU`: the distance modulus from the z-band only BayeSN fit
-  * `Z_MU_ERR`: the uncertainty on the distance modulus estimate from the z-band only BayeSN fit
-  * `Z_THETA`: the stretch parameter from the z-band only BayeSN fit
-  * `Z_THETA_ERR`: the uncertainty on the stretch parameter from the z-band only BayeSN fit
-  * `Z_EXT`: the extinction in the z-band assuming Rv = 2.61 (from T21 model) and Av = GRI_AV
-  * `N_G_OBS`: the number of g-band observations between (-10, 40) phase days
-  * `FIRST_G_OBS`: the time of the first g-band observation between (-10, 40) phase days, in MJD
-  * `N_R_OBS`: the number of r-band observations between (-10, 40) phase days
-  * `FIRST_R_OBS`: the time of the first r-band observation between (-10, 40) phase days, in MJD
-  * `N_I_OBS`: the number of i-band observations between (-10, 40) phase days
-  * `FIRST_I_OBS`: the time of the first i-band observation between (-10, 40) phase days, in MJD
-  * `N_Z_OBS`: the number of z-band observations between (-10, 40) phase days
-  * `FIRST_Z_OBS`: the time of the first z-band observation between (-10, 40) phase days, in MJD
-* `peak_mags_table.csv`: a table with the peak magnitude information used for the stretch-luminosity analysis in Hayes+2024
-  * `SNID`: the name of each object
-  * `SURVEY`: if the object comes from YSE DR1 ("YSE") or Founation DR1 ("FOUNDATION")
-  * `REDSHIFT_FINAL`: the final, peculiar velocity corrected, redshift (sometimes also referred to as z_HD, for Hubble diagram, in other works)
-  * `LOG_HOSTMASS`: the log stellar mass of the host galaxy associated with each SN
-  * `PEAKMAG_X_DUSTCORR`: the peak dust-corrected, assuming Rv = 2.61 and Av = GRI_AV, apparent magnitude for filter X
+  * `GRIZ_MU(_ERR)`: the distance modulus (and uncertainty) from the griz BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRIZ_AV(_ERR)`: the dust extinction parameter (and uncertainty) from the griz BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRIZ_THETA(_ERR)`: the light curve stretch parameter (and uncertainty) from the griz BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRIZ_T0(_ERR)`: the time of B-band maximum flux (and uncertainty) from the griz BayeSN fit, in MJD assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRIZ_REDCHI2`: the reduced chi squared for the light curve fit from the griz BayeSN fit assuming Rv = 2.61
+  * `GRI_MU(_ERR)`: the distance modulus (and uncertainty) from the gri BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRI_AV(_ERR)`: the dust extinction parameter (and uncertainty) from the gri BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRI_THETA(_ERR)`: the light curve stretch parameter (and uncertainty) from the gri BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `GRI_T0(_ERR)`: the time of B-band maximum flux (and uncertainty) from the gri BayeSN fit, in MJD assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `Z_MU(_ERR)`: the distance modulus (and uncertainty) from the z-band only BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `Z_THETA(_ERR)`: the stretch parameter (and uncertainty) from the z-band only BayeSN fit assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `X_MU(_ERR)`: the distance modulus (and uncertainty) from the X-band only BayeSN fit, where X may be 'G', 'R', or 'I' assuming Rv = 2.61
+    * `LOWRV_`: prefix indicates the parameter was fit assuming Rv = 2.39
+    * `HIGHRV_`: prefix indicates the parameter was fit assuming Rv = 3.14
+  * `PEAKMAG_X_DUSTCORR`: the peak dust-corrected, assuming Rv = 2.61 and Av = GRIZ_AV, apparent magnitude for filter X
   * `PEAKMAG_X_DUSTCORR_ERR`: the uncertainty on PEAKMAG_X_DUSTCORR for filter X
-  * `PEAKMAG_X_DUSTCORR_THETACORR`: the peak dust-corrected, assuming Rv = 2.61 and Av = GRI_AV, and stretch-corrected magnitude for filter X
+  * `PEAKMAG_X_DUSTCORR_THETACORR`: the peak dust-corrected, assuming Rv = 2.61 and Av = GRIZ_AV, and stretch-corrected magnitude for filter X
   * `PEAKMAG_X_DUSTCORR_THETACORR_ERR`: the uncertainty on PEAKMAG_X_DUSTCORR_THETACORR for filter X
-  * `X_EXT`: the extinction in filter X assuming Rv = 2.61 and Av = GRI_AV
-* `diff_Rv_Grayling.csv`: a table with the parameter estimates for the fits assuming different Rv values (Rv values from Grayling M., et al., 2024, [MNRAS](https://doi.org/10.1093/mnras/stae1202), [531, 953](https://ui.adsabs.harvard.edu/abs/2024MNRAS.531..953G/abstract)); the columns have the same names as in `full.csv`, but with the additional prefixes of:
-  * `LOWRV_`: indicates the parameter was fit assuming Rv = 2.39
-  * `HIGHRV_`: indicates the parameter was fit assuming Rv = 3.14
+  * `X_EXT`: the extinction in filter X assuming Rv = 2.61 and Av = GRIZ_AV
+  * `N_X_OBS`: the number of X-band observations between (-10, 40) phase days
+  * `FIRST_X_OBS`: the time of the first X-band observation between (-10, 40) phase days, in MJD
 * `other_surveys_comp_data.csv`: a table with the redshifts and host galaxy masses for the iPTF, CSP, and CfA samples used in other similar analyses of SNe Ia in the NIR; used to create Figures 1 and 2 in Hayes+2024
 
-These three tables have all the necessary information to reproduce the figures and results from the paper.
+These two tables have all the necessary information to reproduce the figures and results from the paper. Note that the Rv values for the split Rv case come from Grayling M., et al., 2024, [MNRAS](https://doi.org/10.1093/mnras/stae1202), [531, 953](https://ui.adsabs.harvard.edu/abs/2024MNRAS.531..953G/abstract).
 
 ## Figures
 In this folder, you will find full resolution copies of the figures from Hayes+24 and plots of the BayeSN fits to the data.
