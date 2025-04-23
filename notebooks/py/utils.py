@@ -278,7 +278,7 @@ def plot_histogram(data, key, bins=None, split_by_survey=False):
     - data (DataFrame): DataFrame containing the data to be plotted.
     - key (str): The key indicating which data column to plot. Must be one of: 'REDSHIFT_FINAL', 'LOG_HOSTMASS', or contain 'THETA' or 'AV'.
     - bins (array-like or int, optional): Bins for histogram. If key is not in supported list, then bins must be specified.
-    - bins (bool, optional): Whether to plot the 'THETA' or 'AV' distributions by survey.
+    - split_by_survey (bool, optional): Whether to plot the 'THETA' or 'AV' distributions by survey.
 
     Returns:
     - fig (matplotlib.figure.Figure): The generated matplotlib figure.
@@ -340,6 +340,38 @@ def plot_histogram(data, key, bins=None, split_by_survey=False):
 
     return fig
 
+
+def plot_galaxy_main_sequence(data):
+    """
+    Plots the galaxy main sequence plot (log(SFR) vs log(host mass)).
+
+    Parameters:
+    - data (DataFrame): DataFrame containing the data to be plotted.
+
+    Returns:
+    - fig (matplotlib.figure.Figure): The generated matplotlib figure.
+    """
+    survey_mask = data['SURVEY'] == 'YSE'
+    fig = plt.figure()
+
+    _, _, bars = plt.errorbar(data[~survey_mask]['LOG_HOSTMASS'], data[~survey_mask]['LOG_HOSTSFR'],
+                              xerr=data[~survey_mask]['LOG_HOSTMASS_ERR'], yerr=data[~survey_mask]['LOG_HOSTSFR_ERR'],
+                              ls='None', marker='o', ms=5, color=blue, label='Foundation')
+    [bar.set_alpha(0.25) for bar in bars]
+
+    _, _, bars = plt.errorbar(data[survey_mask]['LOG_HOSTMASS'], data[survey_mask]['LOG_HOSTSFR'],
+                              xerr=data[survey_mask]['LOG_HOSTMASS_ERR'], yerr=data[survey_mask]['LOG_HOSTSFR_ERR'],
+                              ls='None', marker='s', ms=5, color=green, label='YSE')
+    [bar.set_alpha(0.25) for bar in bars]
+
+    # Adding labels, legend, and adjusting layout
+    plt.xlabel('$\\log_{10}(\\mathcal{M}_{*}/\\mathcal{M}_{\\odot})$')
+    plt.ylabel('$\\log_{10}(\\rm SFR)$')
+    plt.title('Host Galaxy Mass vs SFR')
+    plt.legend(fontsize=14)
+    plt.tight_layout()
+
+    return fig
 
 
 def apply_data_cuts(data, redshift_lower_limit=0.015, redshift_upper_limit_YSE=0.1, redshift_upper_limit_Foundation=0.08, keep_91Ts=False, g_obs=1, r_obs=1, i_obs=1, z_obs=3, gri_prepeak=True, z_prepeak=False, chi_squared_threshold=3, t0_unc_threshold=1, t0_agreement_threshold=0.5, Av_upper_limit=1, theta_lower_limit=-1.5, theta_upper_limit=3, host_galaxy_mass=True, save_path='', print_summary=True):
@@ -488,7 +520,7 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
             wave = wave_dict[fit_filters]
             ext_mag = np.zeros(len(subset))
             for r, row in enumerate(subset):
-                ext_mag[r] = extinction.fitzpatrick99(np.array([wave]), a_v = row['GRI_AV'], r_v=2.610)
+                ext_mag[r] = extinction.fitzpatrick99(np.array([wave]), a_v = row['GRIZ_AV'], r_v=2.610)
 
             mu = mu - ext_mag
         
@@ -512,7 +544,7 @@ def plot_hubble_diagram(data, fit_filters = 'griz', dust_corrected=True, colors=
     rms = np.sqrt(np.mean(np.array(resids)**2))
     xloc = ((np.max(ax[0].get_xlim()) - np.min(ax[0].get_xlim()))* 0.6) + np.min(ax[0].get_xlim())
     yloc = ((np.max(ax[0].get_ylim()) - np.min(ax[0].get_ylim()))* 0.1) + np.min(ax[0].get_ylim())
-    ax[0].text(xloc, yloc, 'RMS = '+str(round(rms, 3)), fontsize=14)
+    ax[0].text(xloc, yloc, f'RMS = {rms:.3f}', fontsize=14)
 
     ax[1].set_xlabel('$z$')
     ax[0].set_ylabel('$\\mu$')
@@ -717,19 +749,19 @@ def plot_mass_step(data, fit_filters='griz', M_split=10, samples=None, dust_corr
         ax.axhspan(delta_HM-delta_HM_unc, delta_HM+delta_HM_unc, (M_split - xmin)/xwidth, 1, ls='-', color='crimson', alpha=0.2)
 
         try:
-            ax.text(6.75, ymin+(0.24*ywidth), '$\\sigma_{\\rm{res, LM}}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_LM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM'])):.3f}", fontsize=16)
-            ax.text(6.75, ymin+(0.1*ywidth), '$\\sigma_{\\rm{res, HM}}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_HM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM'])):.3f}", fontsize=16)
+            ax.text(7.5, ymin+(0.24*ywidth), '$\\sigma_{\\rm{res, LM}}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_LM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM'])):.3f}", fontsize=16)
+            ax.text(7.5, ymin+(0.1*ywidth), '$\\sigma_{\\rm{res, HM}}$'+f": {np.mean(np.sqrt(samples['sigma_2_res_HM'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM'])):.3f}", fontsize=16)
         except:
-            ax.text(6.75, ymin+(0.3*ywidth), '$\\sigma_{\\rm{res, LM}}$: ', fontsize=16)
-            ax.text(7.5, ymin+(0.3*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f}", fontsize=16, color=blue)
-            ax.text(7.5, ymin+(0.22*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f}", fontsize=16, color=green)
+            ax.text(7.5, ymin+(0.3*ywidth), '$\\sigma_{\\rm{res, LM}}$: ', fontsize=16)
+            ax.text(8.0, ymin+(0.3*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_Foundation'])):.3f}", fontsize=16, color=blue)
+            ax.text(8.0, ymin+(0.22*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_LM_YSE'])):.3f}", fontsize=16, color=green)
             
-            ax.text(6.75, ymin+(0.12*ywidth), '$\\sigma_{\\rm{res, HM}}$: ', fontsize=16)
-            ax.text(7.5, ymin+(0.12*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f}", fontsize=16, color=blue)
-            ax.text(7.5, ymin+(0.04*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f}", fontsize=16, color=green)
+            ax.text(7.5, ymin+(0.12*ywidth), '$\\sigma_{\\rm{res, HM}}$: ', fontsize=16)
+            ax.text(8.0, ymin+(0.12*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_Foundation'])):.3f}", fontsize=16, color=blue)
+            ax.text(8.0, ymin+(0.04*ywidth), f"{np.mean(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f} $\\pm$ {np.std(np.sqrt(samples['sigma_2_res_HM_YSE'])):.3f}", fontsize=16, color=green)
 
         rms = np.sqrt(np.mean(np.array(y)**2))
-        ax.text(6.75, ymin+(0.85*ywidth), f"$\\gamma$: {np.mean(samples['gamma']):.3f} $\\pm$ {np.std(samples['gamma']):.3f}", fontsize=16)
+        ax.text(7.5, ymin+(0.85*ywidth), f"$\\gamma$: {np.mean(samples['gamma']):.3f} $\\pm$ {np.std(samples['gamma']):.3f}", fontsize=16)
 
     ax.set_xlabel('$\\log_{10}(M_{*} / M_{\odot})$')
     ax.set_ylabel('$\\mu_{'+fit_filters+'} - \\mu_{\\Lambda \\rm{CDM}}(z)$')
