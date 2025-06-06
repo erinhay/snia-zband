@@ -1,6 +1,7 @@
 # Supplimentary Resources for the Foundation+YSE Analysis of the Cosmological Utility of SNe Ia in the z-band
 
-If you make use of this repository or the analysis in Hayes+25, please cite: Hayes E.E., et al., 2025 ...
+If you make use of this repository or the analysis in Hayes+25, please cite: Hayes E.E., et al., 2025, [pre-print](
+https://doi.org/10.48550/arXiv.2506.04309).
 
 If you have any questions about this repository or the associated paper, you can direct them to Erin Hayes at eeh55@cam.ac.uk. Thank you!
 
@@ -71,9 +72,9 @@ In this folder, you will find two tables:
   * `X_EXT`: the extinction in filter X assuming Rv = 2.61 and Av = GRIZ_AV
   * `N_X_OBS`: the number of X-band observations between (-10, 40) phase days
   * `FIRST_X_OBS`: the time of the first X-band observation between (-10, 40) phase days, in MJD
-* `other_surveys_comp_data.csv`: a table with the redshifts and host galaxy masses for the iPTF, CSP, and CfA samples used in other similar analyses of SNe Ia in the NIR; used to create Figures 1 and 2 in Hayes+2024
+* `other_surveys_comp_data.csv`: a table with the redshifts and host galaxy masses for the iPTF, CSP, and CfA samples used in other similar analyses of SNe Ia in the NIR; used to create Figures 1 and 2 in Hayes+2025
 
 These two tables have all the necessary information to reproduce the figures and results from the paper. Note that the Rv values for the split Rv case come from Grayling M., et al., 2024, [MNRAS](https://doi.org/10.1093/mnras/stae1202), [531, 953](https://ui.adsabs.harvard.edu/abs/2024MNRAS.531..953G/abstract).
 
 ## Figures
-In this folder, you will find full resolution copies of the figures from Hayes+24 and plots of the BayeSN fits to the data.
+In this folder, you will find full resolution copies of the figures from Hayes+25 and plots of the BayeSN fits to the data.
