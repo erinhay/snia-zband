@@ -1,6 +1,6 @@
 # Supplimentary Resources for the Foundation+YSE Analysis of the Cosmological Utility of SNe Ia in the z-band
 
-If you make use of this repository or the analysis in Hayes+25, please cite: Hayes E.E., et al., 2025, [pre-print](
+If you make use of this repository or the analysis in Hayes+25, please cite: Hayes E.E., et al., 2025, [arxiv](
 https://doi.org/10.48550/arXiv.2506.04309).
 
 If you have any questions about this repository or the associated paper, you can direct them to Erin Hayes at eeh55@cam.ac.uk. Thank you!
